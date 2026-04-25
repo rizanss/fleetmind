@@ -10,21 +10,23 @@ export default function DashboardPage() {
   const { routes, lastUpdate, isConnected, connectionError } = useRouteUpdates();
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const prevUpdateRef = useRef<Date | null>(null);
+  // Tracks "anomaly_id-slotIndex" keys already added to the audit trail
+  const seenRouteKeysRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!lastUpdate || lastUpdate === prevUpdateRef.current) return;
-    const anomalyRoutes = routes.filter((r) => r.recalc_duration_ms > 0);
-    if (anomalyRoutes.length === 0) {
-      prevUpdateRef.current = lastUpdate;
-      return;
-    }
-    const newEntries: AuditEntry[] = anomalyRoutes.map((route, idx) => ({
-      route,
-      receivedAt: lastUpdate,
-      courierIndex: idx,
-    }));
-    setAuditEntries((prev) => [...prev, ...newEntries]);
     prevUpdateRef.current = lastUpdate;
+
+    const newEntries: AuditEntry[] = [];
+    routes.forEach((route, idx) => {
+      if (route.recalc_duration_ms === 0) return;
+      const key = `${route.anomaly_id}-${idx}`;
+      if (seenRouteKeysRef.current.has(key)) return;
+      seenRouteKeysRef.current.add(key);
+      newEntries.push({ route, receivedAt: lastUpdate, courierIndex: idx });
+    });
+
+    if (newEntries.length > 0) setAuditEntries((prev) => [...prev, ...newEntries]);
   }, [lastUpdate, routes]);
 
   return (
