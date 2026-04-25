@@ -14,32 +14,29 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { label: "Sudirman Banjir",     affected_point_id: "sudirman",  type: "road_closure",  note: "3 kurir",  color: "#EF4444" },
-  { label: "Semanggi Macet",      affected_point_id: "semanggi",  type: "road_closure",  note: "Kurir 1",  color: "#F97316" },
-  { label: "Senayan Ditutup",     affected_point_id: "senayan",   type: "road_closure",  note: "Kurir 2",  color: "#F97316" },
-  { label: "Paket Batal Thamrin", affected_point_id: "thamrin",   type: "cancellation",  note: "Kurir 3",  color: "#A78BFA" },
+  { label: "Sudirman Banjir",     affected_point_id: "sudirman",  type: "road_closure",  note: "ALL",     color: "#FF3B5C" },
+  { label: "Semanggi Macet",      affected_point_id: "semanggi",  type: "road_closure",  note: "KURIR 1", color: "#00D4FF" },
+  { label: "Senayan Ditutup",     affected_point_id: "senayan",   type: "road_closure",  note: "KURIR 2", color: "#FF6B35" },
+  { label: "Paket Batal Thamrin", affected_point_id: "thamrin",   type: "cancellation",  note: "KURIR 3", color: "#00FF87" },
 ];
 
-const TYPE_LABELS: Record<AnomalyEventType, string> = {
-  road_closure: "Penutupan",
-  cancellation: "Pembatalan",
-};
-
 export default function AnomalyPanel() {
-  const [loading, setLoading] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"preset" | "custom">("preset");
-  const [customPointId, setCustomPointId] = useState("");
   const [customType, setCustomType] = useState<AnomalyEventType>("road_closure");
+  const [customLocation, setCustomLocation] = useState<string>("");
+  const [customTarget, setCustomTarget] = useState<string>("semanggi");
 
-  const simulate = async (pointId: string, type: AnomalyEventType) => {
+  const simulate = async (pointId: string, type: AnomalyEventType, locationName?: string) => {
     if (!pointId.trim()) return;
-    setLoading(true);
+    setLoadingId(pointId);
     setError(null);
 
     const payload: AnomalyEvent = {
       type,
       affected_point_id: pointId.trim(),
+      ...(locationName?.trim() ? { location_name: locationName.trim() } : {}),
       timestamp: new Date().toISOString(),
     };
 
@@ -56,31 +53,36 @@ export default function AnomalyPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
-      setLoading(false);
+      setLoadingId(null);
     }
   };
 
   return (
-    <div className="rounded-xl border border-[#334155] bg-[#1E293B] p-4 space-y-3">
+    <div className="rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] p-5 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#F1F5F9]">Anomaly Simulation</h2>
-        <span className="flex items-center gap-1.5 rounded-full border border-[#F97316]/40 bg-[#F97316]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#F97316]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#F97316] animate-pulse" />
-          Demo
-        </span>
+      <div className="mb-4 border-b border-[var(--fm-border)] pb-3">
+        <h2 className="text-sm font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)]">
+          ANOMALY SIMULATION
+        </h2>
+        <p className="text-[10px] uppercase tracking-widest text-[var(--fm-accent)] mt-1 font-bold">
+          Dynamic TSP Re-routing Engine
+        </p>
       </div>
 
+      <p className="text-[10px] leading-relaxed text-[var(--fm-subtle)] mb-4 font-[family-name:var(--font-inter)]">
+        When triggered, OR-Tools TSP solver recalculates optimal routes in real-time.
+      </p>
+
       {/* Mode toggle */}
-      <div className="flex rounded-lg border border-[#334155] p-0.5 bg-[#0F172A] text-xs font-semibold">
+      <div className="mb-4 flex rounded border border-[var(--fm-border)] bg-[var(--fm-bg)] p-0.5 text-[10px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] uppercase">
         {(["preset", "custom"] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-md py-1.5 capitalize transition-all duration-150 ${
+            className={`flex-1 rounded py-1.5 transition-all ${
               mode === m
-                ? "bg-[#334155] text-[#F1F5F9] shadow-sm"
-                : "text-[#64748B] hover:text-[#94A3B8]"
+                ? "bg-[var(--fm-surface)] text-[var(--fm-text)] shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                : "text-[var(--fm-subtle)] hover:text-[var(--fm-muted)]"
             }`}
           >
             {m}
@@ -88,92 +90,140 @@ export default function AnomalyPanel() {
         ))}
       </div>
 
-      {/* Preset mode */}
+      {/* Preset Scenarios */}
       {mode === "preset" && (
-        <div className="space-y-1.5">
-          {PRESETS.map((p) => (
-            <button
-              key={p.affected_point_id}
-              onClick={() => void simulate(p.affected_point_id, p.type)}
-              disabled={loading}
-              style={{ "--hover-color": p.color } as React.CSSProperties}
-              className="group w-full flex items-center justify-between rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2.5 text-left text-xs transition-all duration-150 hover:border-[#EF4444]/40 hover:bg-[#EF4444]/5 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ background: p.color }}
-                />
-                <span className="font-semibold text-[#F1F5F9] truncate">{p.label}</span>
-                <span className="text-[#64748B] shrink-0">{TYPE_LABELS[p.type]}</span>
-              </div>
-              <span
-                className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
-                style={{ color: p.color, background: `${p.color}20` }}
+        <div className="space-y-3">
+          {PRESETS.map((p) => {
+            const isLoading = loadingId === p.affected_point_id;
+            return (
+              <div
+                key={p.affected_point_id}
+                className="relative flex flex-col gap-3 rounded bg-[var(--fm-bg)] p-3 shadow-[0_4px_10px_rgba(0,0,0,0.3)] transition-colors"
+                style={{ borderLeft: `3px solid ${p.color}` }}
               >
-                {p.note}
-              </span>
-            </button>
-          ))}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-[12px] text-[var(--fm-text)] truncate">{p.label}</h3>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
+                        {p.type === "road_closure" ? "ROAD CLOSURE" : "CANCELLATION"}
+                      </span>
+                      <span 
+                        className="text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)]"
+                        style={{ color: p.color }}
+                      >
+                        {p.note}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => void simulate(p.affected_point_id, p.type)}
+                  disabled={isLoading}
+                  className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50"
+                >
+                  {/* Hover Glow */}
+                  <div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity"
+                    style={{ background: `linear-gradient(90deg, transparent, ${p.color}, transparent)` }}
+                  />
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {isLoading ? (
+                      <>
+                        <span className="h-2 w-2 animate-spin rounded-full border border-t-transparent border-[var(--fm-text)]" />
+                        EXECUTING...
+                      </>
+                    ) : (
+                      "TRIGGER"
+                    )}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Custom mode */}
+      {/* Custom Scenarios */}
       {mode === "custom" && (
-        <div className="space-y-2.5">
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#64748B] mb-1.5">
-              Affected Point ID
-            </label>
-            <input
-              type="text"
-              value={customPointId}
-              onChange={(e) => setCustomPointId(e.target.value)}
-              placeholder="semanggi, kuningan, menteng…"
-              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-xs text-[#F1F5F9] placeholder-[#475569] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]/30 transition-colors font-[family-name:var(--font-dm-mono)]"
-            />
-            <p className="mt-1 text-[10px] text-[#475569]">
-              Substring dari Stop ID kurir — cek demo_routes.py
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-widest text-[#64748B] mb-1.5">
-              Tipe Anomaly
+        <div className="space-y-4 rounded bg-[var(--fm-bg)] p-3 shadow-[0_4px_10px_rgba(0,0,0,0.3)] border border-[var(--fm-border)] border-l-[3px] border-l-[var(--fm-accent)]">
+          <div className="space-y-1.5">
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
+              Anomaly Type
             </label>
             <select
               value={customType}
               onChange={(e) => setCustomType(e.target.value as AnomalyEventType)}
-              className="w-full rounded-lg border border-[#334155] bg-[#0F172A] px-3 py-2 text-xs text-[#F1F5F9] focus:border-[#3B82F6] focus:outline-none focus:ring-1 focus:ring-[#3B82F6]/30 transition-colors appearance-none cursor-pointer"
+              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors appearance-none cursor-pointer font-[family-name:var(--font-space-grotesk)]"
             >
-              <option value="road_closure">road_closure — Jalan Ditutup</option>
-              <option value="cancellation">cancellation — Paket Dibatalkan</option>
+              <option value="road_closure">ROAD CLOSURE</option>
+              <option value="cancellation">CANCELLATION</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
+              Location / Road Name
+            </label>
+            <input
+              type="text"
+              value={customLocation}
+              onChange={(e) => setCustomLocation(e.target.value)}
+              placeholder="e.g. Jalan Sudirman, Tol JORR, Bundaran HI"
+              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors placeholder:text-[var(--fm-subtle)]/50 font-[family-name:var(--font-space-grotesk)]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
+              Affected Courier
+            </label>
+            <select
+              value={customTarget}
+              onChange={(e) => setCustomTarget(e.target.value)}
+              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors appearance-none cursor-pointer font-[family-name:var(--font-space-grotesk)]"
+            >
+              <option value="semanggi">KURIR-01</option>
+              <option value="senayan">KURIR-02</option>
+              <option value="thamrin">KURIR-03</option>
+              <option value="sudirman">ALL</option>
             </select>
           </div>
 
           <button
-            onClick={() => void simulate(customPointId, customType)}
-            disabled={loading || !customPointId.trim()}
-            className="w-full rounded-lg px-4 py-2.5 text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-[#EF4444] to-[#F97316] shadow-[0_0_20px_rgba(239,68,68,0.25)] hover:shadow-[0_0_28px_rgba(239,68,68,0.45)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            onClick={() => void simulate(customTarget, customType, customLocation)}
+            disabled={loadingId !== null}
+            className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50 mt-2"
           >
-            {loading && (
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            )}
-            {loading ? "Simulating…" : "Simulate"}
+            {/* Hover Glow */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity"
+              style={{ background: `linear-gradient(90deg, transparent, var(--fm-accent), transparent)` }}
+            />
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {loadingId === customTarget ? (
+                <>
+                  <span className="h-2 w-2 animate-spin rounded-full border border-t-transparent border-[var(--fm-text)]" />
+                  EXECUTING...
+                </>
+              ) : (
+                "TRIGGER CUSTOM ANOMALY"
+              )}
+            </span>
           </button>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 p-3 text-xs text-[#FCA5A5]">
-          <span className="flex-1 leading-relaxed">{error}</span>
+        <div className="mt-4 flex items-start gap-2 rounded border border-[var(--fm-danger)]/50 bg-[var(--fm-danger)]/10 p-3 text-xs text-[var(--fm-danger)] font-[family-name:var(--font-space-grotesk)]">
+          <span className="flex-1 leading-relaxed">ERR: {error}</span>
           <button
             onClick={() => setError(null)}
-            className="shrink-0 font-bold text-[#EF4444] hover:text-[#FCA5A5] transition-colors"
-            aria-label="Dismiss error"
+            className="shrink-0 font-bold hover:text-white transition-colors"
           >
-            ✕
+            [X]
           </button>
         </div>
       )}

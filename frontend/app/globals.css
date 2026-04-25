@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --fm-bg:      #0F172A;
-  --fm-surface: #1E293B;
-  --fm-border:  #334155;
+  --fm-bg:      #0A0F1E;
+  --fm-surface: #0D1526;
+  --fm-border:  #1E2D45;
   --fm-text:    #F1F5F9;
   --fm-muted:   #94A3B8;
   --fm-subtle:  #64748B;
-  --fm-accent:  #3B82F6;
-  --fm-success: #22C55E;
-  --fm-warning: #F97316;
-  --fm-danger:  #EF4444;
-  --fm-metric:  #A78BFA;
+  --fm-accent:  #00D4FF;
+  --fm-success: #00FF87;
+  --fm-warning: #FF6B35;
+  --fm-danger:  #FF3B5C;
+  --fm-metric:  #A855F7;
 }
 
 @theme inline {
-  --font-sans: var(--font-outfit);
-  --font-mono: var(--font-dm-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-space-grotesk);
 }
 
 * {
@@ -28,9 +28,11 @@ html, body {
 }
 
 body {
-  background: var(--fm-bg);
+  background-color: var(--fm-bg);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
   color: var(--fm-text);
-  font-family: var(--font-outfit), "Outfit", sans-serif;
+  font-family: var(--font-inter), "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -52,10 +54,10 @@ body {
 
 /* Dark Leaflet overrides */
 .leaflet-container {
-  background: #1a2332;
+  background: var(--fm-bg);
 }
 .leaflet-control-attribution {
-  background: rgba(15, 23, 42, 0.85) !important;
+  background: rgba(10, 15, 30, 0.85) !important;
   color: #64748B !important;
   font-size: 9px !important;
 }
@@ -63,22 +65,23 @@ body {
   color: #94A3B8 !important;
 }
 .leaflet-control-zoom a {
-  background: #1E293B !important;
+  background: var(--fm-surface) !important;
   color: #94A3B8 !important;
-  border-color: #334155 !important;
+  border-color: var(--fm-border) !important;
 }
 .leaflet-control-zoom a:hover {
-  background: #334155 !important;
+  background: var(--fm-border) !important;
   color: #F1F5F9 !important;
 }
 .leaflet-tooltip {
-  background: #1E293B !important;
-  border: 1px solid #334155 !important;
+  background: var(--fm-surface) !important;
+  border: 1px solid var(--fm-border) !important;
   color: #F1F5F9 !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
-  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
+  border-radius: 4px !important;
   font-size: 11px !important;
+  font-family: var(--font-space-grotesk), monospace !important;
 }
 .leaflet-tooltip::before {
-  border-top-color: #334155 !important;
+  border-top-color: var(--fm-border) !important;
 }
