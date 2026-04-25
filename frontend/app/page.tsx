@@ -10,7 +10,6 @@ export default function DashboardPage() {
   const { routes, lastUpdate, isConnected, connectionError } = useRouteUpdates();
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const prevUpdateRef = useRef<Date | null>(null);
-  // Tracks "anomaly_id-slotIndex" keys already added to the audit trail
   const seenRouteKeysRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -29,31 +28,58 @@ export default function DashboardPage() {
     if (newEntries.length > 0) setAuditEntries((prev) => [...prev, ...newEntries]);
   }, [lastUpdate, routes]);
 
+  const statusLabel = isConnected ? "Live" : connectionError ? "Error" : "Connecting…";
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
-      <header className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2.5 shadow-sm">
-        <div>
-          <h1 className="text-sm font-bold text-gray-900 tracking-tight">Fleetmind</h1>
-          <p className="text-xs text-gray-400">Autonomous Logistics Orchestrator</p>
+    <div className="flex h-screen flex-col overflow-hidden bg-[#0F172A]">
+      {/* Header */}
+      <header className="flex shrink-0 items-center justify-between border-b border-[#1E293B] bg-[#0F172A] px-5 py-3">
+        <div className="flex items-center gap-3">
+          {/* Logomark */}
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#3B82F6] text-white text-[10px] font-black tracking-tight shadow-[0_0_12px_rgba(59,130,246,0.4)]">
+            FM
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-[#F1F5F9] tracking-tight leading-none">
+              Fleetmind
+            </h1>
+            <p className="text-[10px] text-[#64748B] uppercase tracking-widest mt-0.5">
+              Logistics Orchestrator
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
+
+        {/* Connection status */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex h-2.5 w-2.5 items-center justify-center">
+            {isConnected && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] opacity-60" />
+            )}
+            <span
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                isConnected ? "bg-[#22C55E]" : connectionError ? "bg-[#EF4444]" : "bg-[#F97316]"
+              }`}
+            />
+          </div>
           <span
-            className={`h-2.5 w-2.5 rounded-full ${
-              isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+            className={`text-xs font-medium tabular-nums ${
+              isConnected ? "text-[#22C55E]" : connectionError ? "text-[#EF4444]" : "text-[#F97316]"
             }`}
-          />
-          <span className="text-xs text-gray-500">
-            {isConnected ? "Live" : connectionError ? "Error" : "Connecting…"}
+          >
+            {statusLabel}
           </span>
         </div>
       </header>
 
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden min-w-0">
+        {/* Map area */}
         <main className="flex-[7] min-w-0 relative">
           <FleetMap routes={routes} />
         </main>
 
-        <aside className="flex-[3] min-w-[280px] max-w-sm flex flex-col gap-3 overflow-y-auto border-l border-gray-200 bg-white p-3">
+        {/* Sidebar */}
+        <aside className="fm-scroll flex-[3] min-w-[280px] max-w-sm flex flex-col gap-3 overflow-y-auto border-l border-[#1E293B] bg-[#0F172A] p-3">
           <AnomalyPanel />
           <AuditTrail entries={auditEntries} />
         </aside>
