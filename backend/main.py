@@ -42,8 +42,10 @@ app.add_middleware(
 
 
 from backend.routers import anomaly as anomaly_router
+from backend.routers import routes as routes_router
 
 app.include_router(anomaly_router.router)
+app.include_router(routes_router.router)
 
 
 @app.get("/health")
