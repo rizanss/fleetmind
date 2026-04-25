@@ -42,12 +42,12 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-# WebSocket endpoint — manager wired in FLT-10
 @app.websocket("/ws/route-updates")
 async def ws_route_updates(websocket: WebSocket) -> None:
-    await websocket.accept()
+    from backend.services.ws_manager import manager
+    await manager.connect(websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        pass
+        manager.disconnect(websocket)
