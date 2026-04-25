@@ -26,6 +26,8 @@ export function useRouteUpdates(): RouteUpdatesState {
   const lastSeqRef = useRef<number>(0);
   const attemptRef = useRef<number>(0);
   const unmountedRef = useRef(false);
+  // Tracks which anomaly batch is being received so each courier fills a distinct slot
+  const anomalyBatchRef = useRef<{ id: string; count: number }>({ id: "", count: 0 });
 
   const fetchCurrentRoute = useCallback(async () => {
     try {
@@ -63,11 +65,18 @@ export function useRouteUpdates(): RouteUpdatesState {
         if (msg.sequence_id > lastSeqRef.current + 1 && lastSeqRef.current > 0) {
           void fetchCurrentRoute();
         } else {
+          // All couriers in a simulate event share the same anomaly_id.
+          // Track batch slot so each courier fills position 0, 1, 2 instead of overwriting.
+          const batch = anomalyBatchRef.current;
+          if (msg.payload.anomaly_id !== batch.id) {
+            anomalyBatchRef.current = { id: msg.payload.anomaly_id, count: 0 };
+          }
+          const slot = anomalyBatchRef.current.count;
+          anomalyBatchRef.current.count++;
+
           setRoutes((prev) => {
             const next = [...prev];
-            // Replace or append the updated route
-            const idx = next.findIndex((r) => r.anomaly_id === msg.payload.anomaly_id);
-            if (idx !== -1) next[idx] = msg.payload;
+            if (slot < next.length) next[slot] = msg.payload;
             else next.push(msg.payload);
             return next;
           });
