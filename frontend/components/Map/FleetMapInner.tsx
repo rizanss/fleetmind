@@ -5,8 +5,18 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Polyline, Marker, Tooltip } from "react-leaflet";
 import type { RouteResponse } from "@/lib/types";
 
-// New futuristic color palette for couriers
-const COURIER_COLORS = ["#00D4FF", "#FF6B35", "#00FF87", "#A855F7", "#FF3B5C"];
+// Courier color and label maps keyed by courier_id
+const COURIER_COLOR_MAP: Record<string, string> = {
+  courier_1: "#00D4FF",
+  courier_2: "#FF6B35",
+  courier_3: "#00FF87",
+};
+const COURIER_LABEL_MAP: Record<string, string> = {
+  courier_1: "KURIR-01",
+  courier_2: "KURIR-02",
+  courier_3: "KURIR-03",
+};
+const FALLBACK_COLOR = "#A855F7";
 
 interface Props {
   routes: RouteResponse[];
@@ -30,11 +40,11 @@ export default function FleetMapInner({ routes }: Props) {
 
       {/* Legend Box */}
       <div className="absolute bottom-6 left-6 z-[1000] rounded-lg border border-[var(--fm-border)] bg-[var(--fm-surface)]/90 p-3 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-        {COURIER_COLORS.slice(0, 3).map((c, i) => (
-          <div key={i} className="flex items-center gap-2 mb-1.5 last:mb-0">
+        {Object.entries(COURIER_COLOR_MAP).map(([id, c]) => (
+          <div key={id} className="flex items-center gap-2 mb-1.5 last:mb-0">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c, boxShadow: `0 0 8px ${c}` }} />
             <span className="text-[10px] font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)]">
-              KURIR-0{i+1}
+              {COURIER_LABEL_MAP[id]}
             </span>
           </div>
         ))}
@@ -52,8 +62,9 @@ export default function FleetMapInner({ routes }: Props) {
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {routes.map((route, idx) => {
-          const color = COURIER_COLORS[idx % COURIER_COLORS.length];
+        {routes.map((route) => {
+          const color = COURIER_COLOR_MAP[route.courier_id] ?? FALLBACK_COLOR;
+          const label = COURIER_LABEL_MAP[route.courier_id] ?? route.courier_id.toUpperCase();
           const positions = route.optimized_route.map(
             (p) => [p.lat, p.lng] as [number, number]
           );
@@ -61,7 +72,7 @@ export default function FleetMapInner({ routes }: Props) {
           const firstPoint = route.optimized_route[0];
 
           return (
-            <div key={`${route.anomaly_id}-${idx}`}>
+            <div key={`${route.anomaly_id}-${route.courier_id}`}>
               <Polyline positions={positions} pathOptions={{ color, weight: 3, opacity: 0.8 }} className="animate-pulse" />
 
               {/* Courier Badge on the map (attached to the first point of the route) */}
@@ -70,7 +81,7 @@ export default function FleetMapInner({ routes }: Props) {
                   position={[firstPoint.lat, firstPoint.lng]} 
                   icon={L.divIcon({
                     className: "bg-transparent border-none",
-                    html: `<div style="background: var(--fm-surface); border-left: 2px solid ${color}; color: ${color}; box-shadow: 0 4px 12px rgba(0,0,0,0.5);" class="rounded px-2 py-1 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] whitespace-nowrap">KURIR-0${idx+1} | TSP Route</div>`,
+                    html: `<div style="background: var(--fm-surface); border-left: 2px solid ${color}; color: ${color}; box-shadow: 0 4px 12px rgba(0,0,0,0.5);" class="rounded px-2 py-1 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] whitespace-nowrap">${label} | TSP Route</div>`,
                     iconAnchor: [-10, 10]
                   })} 
                 />

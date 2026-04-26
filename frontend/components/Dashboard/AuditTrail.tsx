@@ -5,7 +5,6 @@ import type { RouteResponse } from "@/lib/types";
 interface AuditEntry {
   route: RouteResponse;
   receivedAt: Date;
-  courierIndex: number;
 }
 
 interface Props {
@@ -14,7 +13,25 @@ interface Props {
 
 export type { AuditEntry };
 
-const COURIER_COLORS = ["#00D4FF", "#FF6B35", "#00FF87", "#A855F7", "#FF3B5C"];
+const COURIER_COLOR_MAP: Record<string, string> = {
+  courier_1: "#00D4FF",
+  courier_2: "#FF6B35",
+  courier_3: "#00FF87",
+};
+
+const COURIER_LABEL_MAP: Record<string, string> = {
+  courier_1: "KURIR-01",
+  courier_2: "KURIR-02",
+  courier_3: "KURIR-03",
+};
+
+function getCourierColor(courierId: string): string {
+  return COURIER_COLOR_MAP[courierId] ?? "#A855F7";
+}
+
+function getCourierLabel(courierId: string): string {
+  return COURIER_LABEL_MAP[courierId] ?? courierId.toUpperCase();
+}
 
 export default function AuditTrail({ entries }: Props) {
   if (entries.length === 0) {
@@ -48,10 +65,11 @@ export default function AuditTrail({ entries }: Props) {
 
       <ol className="fm-scroll flex-1 space-y-2 overflow-y-auto pr-2">
         {reversed.map((entry, idx) => {
-          const color = COURIER_COLORS[entry.courierIndex % COURIER_COLORS.length];
+          const color = getCourierColor(entry.route.courier_id);
+          const label = getCourierLabel(entry.route.courier_id);
           return (
             <li
-              key={`${entry.route.anomaly_id}-${entry.courierIndex}`}
+              key={`${entry.route.anomaly_id}-${entry.route.courier_id}`}
               className="rounded bg-[var(--fm-bg)] p-3 border border-[var(--fm-border)] shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
               style={{
                 borderLeft: `2px solid ${color}`,
@@ -68,7 +86,7 @@ export default function AuditTrail({ entries }: Props) {
                       className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] uppercase"
                       style={{ color: color, backgroundColor: `${color}15`, border: `1px solid ${color}30` }}
                     >
-                      KURIR-0{entry.courierIndex + 1} REROUTED
+                      {label} REROUTED
                     </span>
                   </div>
                 </div>

@@ -15,6 +15,7 @@ export interface AnomalyEvent {
 }
 
 export interface RouteResponse {
+  courier_id: string
   optimized_route: RoutePoint[]
   recalc_duration_ms: number
   anomaly_id: string

@@ -20,7 +20,11 @@ const PRESETS: Preset[] = [
   { label: "Paket Batal Thamrin", affected_point_id: "thamrin",   type: "cancellation",  note: "KURIR 3", color: "#00FF87" },
 ];
 
-export default function AnomalyPanel() {
+interface Props {
+  onReset?: () => void;
+}
+
+export default function AnomalyPanel({ onReset }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"preset" | "custom">("preset");
@@ -49,6 +53,24 @@ export default function AnomalyPanel() {
       if (!res.ok) {
         const text = await res.text();
         setError(`Server error ${res.status}: ${text.slice(0, 120)}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const resetRoutes = async () => {
+    setLoadingId("__reset__");
+    setError(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/reset-routes`, { method: "POST" });
+      if (!res.ok) {
+        const text = await res.text();
+        setError(`Reset failed ${res.status}: ${text.slice(0, 120)}`);
+      } else {
+        onReset?.();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
@@ -227,6 +249,25 @@ export default function AnomalyPanel() {
           </button>
         </div>
       )}
+
+      {/* Reset Button */}
+      <button
+        onClick={() => void resetRoutes()}
+        disabled={loadingId !== null}
+        className="group relative mt-4 w-full overflow-hidden rounded border border-[var(--fm-warning)]/30 bg-[var(--fm-bg)] py-2 text-[10px] font-bold tracking-widest text-[var(--fm-warning)] transition-all hover:border-[var(--fm-warning)]/60 hover:bg-[var(--fm-warning)]/10 disabled:opacity-50"
+      >
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-r from-transparent via-[var(--fm-warning)] to-transparent" />
+        <span className="relative z-10 flex items-center justify-center gap-2">
+          {loadingId === "__reset__" ? (
+            <>
+              <span className="h-2 w-2 animate-spin rounded-full border border-t-transparent border-[var(--fm-warning)]" />
+              RESETTING...
+            </>
+          ) : (
+            <>⟲ RESET ALL ROUTES</>
+          )}
+        </span>
+      </button>
     </div>
   );
 }
