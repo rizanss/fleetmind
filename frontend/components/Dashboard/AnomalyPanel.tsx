@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AnomalyEvent, AnomalyEventType } from "@/lib/types";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 
+/* ── Preset definitions ── */
 interface Preset {
   label: string;
   affected_point_id: string;
@@ -20,6 +21,27 @@ const PRESETS: Preset[] = [
   { label: "Paket Batal Thamrin", affected_point_id: "thamrin",   type: "cancellation",  note: "KURIR 3", color: "#00FF87" },
 ];
 
+/* ── Stop data from backend ── */
+interface StopInfo {
+  id: string;
+  label: string;
+}
+
+type StopsMap = Record<string, StopInfo[]>;
+
+const COURIER_LABELS: Record<string, string> = {
+  courier_1: "KURIR-01",
+  courier_2: "KURIR-02",
+  courier_3: "KURIR-03",
+};
+
+const COURIER_COLORS: Record<string, string> = {
+  courier_1: "#00D4FF",
+  courier_2: "#FF6B35",
+  courier_3: "#00FF87",
+};
+
+/* ── Component ── */
 interface Props {
   onReset?: () => void;
 }
@@ -28,11 +50,51 @@ export default function AnomalyPanel({ onReset }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"preset" | "custom">("preset");
-  const [customType, setCustomType] = useState<AnomalyEventType>("road_closure");
-  const [customLocation, setCustomLocation] = useState<string>("");
-  const [customTarget, setCustomTarget] = useState<string>("semanggi");
 
-  const simulate = async (pointId: string, type: AnomalyEventType, locationName?: string) => {
+  // Custom form state
+  const [stopsMap, setStopsMap] = useState<StopsMap>({});
+  const [customCourier, setCustomCourier] = useState<string>("");
+  const [customStop, setCustomStop] = useState<string>("");
+  const [customType, setCustomType] = useState<AnomalyEventType>("road_closure");
+
+  // Fetch available stops when switching to custom mode
+  useEffect(() => {
+    if (mode !== "custom" || Object.keys(stopsMap).length > 0) return;
+
+    const fetchStops = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/demo-stops`);
+        if (!res.ok) return;
+        const data = (await res.json()) as StopsMap;
+        setStopsMap(data);
+
+        // Auto-select first courier and its first stop
+        const courierIds = Object.keys(data);
+        if (courierIds.length > 0) {
+          setCustomCourier(courierIds[0]);
+          if (data[courierIds[0]].length > 0) {
+            setCustomStop(data[courierIds[0]][0].id);
+          }
+        }
+      } catch {
+        // Silently fail — form will show empty
+      }
+    };
+    void fetchStops();
+  }, [mode, stopsMap]);
+
+  // When courier changes, auto-select its first stop
+  const handleCourierChange = (courierId: string) => {
+    setCustomCourier(courierId);
+    const stops = stopsMap[courierId];
+    if (stops && stops.length > 0) {
+      setCustomStop(stops[0].id);
+    } else {
+      setCustomStop("");
+    }
+  };
+
+  const simulate = async (pointId: string, type: AnomalyEventType) => {
     if (!pointId.trim()) return;
     setLoadingId(pointId);
     setError(null);
@@ -40,7 +102,6 @@ export default function AnomalyPanel({ onReset }: Props) {
     const payload: AnomalyEvent = {
       type,
       affected_point_id: pointId.trim(),
-      ...(locationName?.trim() ? { location_name: locationName.trim() } : {}),
       timestamp: new Date().toISOString(),
     };
 
@@ -79,6 +140,16 @@ export default function AnomalyPanel({ onReset }: Props) {
     }
   };
 
+  // Derive available stops for the selected courier
+  const availableStops = customCourier ? stopsMap[customCourier] ?? [] : [];
+  const selectedStopLabel = availableStops.find((s) => s.id === customStop)?.label ?? "";
+  const courierColor = COURIER_COLORS[customCourier] ?? "var(--fm-accent)";
+
+  const selectClass =
+    "w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors appearance-none cursor-pointer font-[family-name:var(--font-space-grotesk)]";
+  const labelClass =
+    "block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]";
+
   return (
     <div className="rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] p-5 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
       {/* Header */}
@@ -112,7 +183,7 @@ export default function AnomalyPanel({ onReset }: Props) {
         ))}
       </div>
 
-      {/* Preset Scenarios */}
+      {/* ════════ Preset Scenarios ════════ */}
       {mode === "preset" && (
         <div className="space-y-3">
           {PRESETS.map((p) => {
@@ -167,64 +238,108 @@ export default function AnomalyPanel({ onReset }: Props) {
         </div>
       )}
 
-      {/* Custom Scenarios */}
+      {/* ════════ Custom Scenarios ════════ */}
       {mode === "custom" && (
-        <div className="space-y-4 rounded bg-[var(--fm-bg)] p-3 shadow-[0_4px_10px_rgba(0,0,0,0.3)] border border-[var(--fm-border)] border-l-[3px] border-l-[var(--fm-accent)]">
+        <div
+          className="space-y-4 rounded bg-[var(--fm-bg)] p-3 shadow-[0_4px_10px_rgba(0,0,0,0.3)] border border-[var(--fm-border)] border-l-[3px]"
+          style={{ borderLeftColor: courierColor }}
+        >
+          {/* Step 1: Pick a Courier */}
           <div className="space-y-1.5">
-            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
-              Anomaly Type
+            <label className={labelClass}>
+              ① Target Courier
+            </label>
+            <select
+              value={customCourier}
+              onChange={(e) => handleCourierChange(e.target.value)}
+              className={selectClass}
+            >
+              {Object.keys(stopsMap).length === 0 ? (
+                <option value="">Loading stops...</option>
+              ) : (
+                Object.keys(stopsMap).map((cId) => (
+                  <option key={cId} value={cId}>
+                    {COURIER_LABELS[cId] ?? cId}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {/* Step 2: Pick which stop to block */}
+          <div className="space-y-1.5">
+            <label className={labelClass}>
+              ② Affected Stop / Location
+            </label>
+            <select
+              value={customStop}
+              onChange={(e) => setCustomStop(e.target.value)}
+              className={selectClass}
+            >
+              {availableStops.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}  ({s.id})
+                </option>
+              ))}
+            </select>
+            {customStop && (
+              <p className="text-[9px] text-[var(--fm-subtle)] mt-1 font-[family-name:var(--font-space-grotesk)] opacity-70">
+                This stop will be excluded from {COURIER_LABELS[customCourier] ?? customCourier}&apos;s route and TSP will recompute.
+              </p>
+            )}
+          </div>
+
+          {/* Step 3: Anomaly type */}
+          <div className="space-y-1.5">
+            <label className={labelClass}>
+              ③ Anomaly Type
             </label>
             <select
               value={customType}
               onChange={(e) => setCustomType(e.target.value as AnomalyEventType)}
-              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors appearance-none cursor-pointer font-[family-name:var(--font-space-grotesk)]"
+              className={selectClass}
             >
-              <option value="road_closure">ROAD CLOSURE</option>
-              <option value="cancellation">CANCELLATION</option>
+              <option value="road_closure">ROAD CLOSURE — block this stop</option>
+              <option value="cancellation">CANCELLATION — remove delivery</option>
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
-              Location / Road Name
-            </label>
-            <input
-              type="text"
-              value={customLocation}
-              onChange={(e) => setCustomLocation(e.target.value)}
-              placeholder="e.g. Jalan Sudirman, Tol JORR, Bundaran HI"
-              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors placeholder:text-[var(--fm-subtle)]/50 font-[family-name:var(--font-space-grotesk)]"
-            />
-          </div>
+          {/* Preview */}
+          {customStop && (
+            <div className="rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] p-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)] mb-1.5">
+                Preview
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <span
+                  className="rounded px-1.5 py-0.5 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] uppercase"
+                  style={{ color: courierColor, backgroundColor: `${courierColor}15`, border: `1px solid ${courierColor}30` }}
+                >
+                  {COURIER_LABELS[customCourier] ?? customCourier}
+                </span>
+                <span className="rounded bg-[var(--fm-bg)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
+                  {customType === "road_closure" ? "ROAD CLOSURE" : "CANCELLATION"}
+                </span>
+                <span className="rounded bg-[var(--fm-bg)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)]">
+                  {selectedStopLabel}
+                </span>
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-1.5">
-            <label className="block text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
-              Affected Courier
-            </label>
-            <select
-              value={customTarget}
-              onChange={(e) => setCustomTarget(e.target.value)}
-              className="w-full rounded border border-[var(--fm-border)] bg-[var(--fm-surface)] px-2.5 py-1.5 text-[11px] text-[var(--fm-text)] font-bold tracking-wider focus:border-[var(--fm-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--fm-accent)]/50 transition-colors appearance-none cursor-pointer font-[family-name:var(--font-space-grotesk)]"
-            >
-              <option value="semanggi">KURIR-01</option>
-              <option value="senayan">KURIR-02</option>
-              <option value="thamrin">KURIR-03</option>
-              <option value="sudirman">ALL</option>
-            </select>
-          </div>
-
+          {/* Trigger */}
           <button
-            onClick={() => void simulate(customTarget, customType, customLocation)}
-            disabled={loadingId !== null}
-            className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50 mt-2"
+            onClick={() => void simulate(customStop, customType)}
+            disabled={loadingId !== null || !customStop}
+            className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50 mt-1"
           >
             {/* Hover Glow */}
             <div 
               className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity"
-              style={{ background: `linear-gradient(90deg, transparent, var(--fm-accent), transparent)` }}
+              style={{ background: `linear-gradient(90deg, transparent, ${courierColor}, transparent)` }}
             />
             <span className="relative z-10 flex items-center justify-center gap-2">
-              {loadingId === customTarget ? (
+              {loadingId === customStop ? (
                 <>
                   <span className="h-2 w-2 animate-spin rounded-full border border-t-transparent border-[var(--fm-text)]" />
                   EXECUTING...

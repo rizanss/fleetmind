@@ -10,7 +10,6 @@ export type AnomalyEventType = "road_closure" | "cancellation"
 export interface AnomalyEvent {
   type: AnomalyEventType
   affected_point_id: string
-  location_name?: string
   timestamp: string // ISO8601
 }
 
