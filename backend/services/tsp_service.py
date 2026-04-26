@@ -55,6 +55,7 @@ class TSPService:
         stops: list[RoutePoint],
         excluded_edges: list[str],
         anomaly_id: str | None = None,
+        courier_id: str = "unknown",
     ) -> RouteResponse:
         """
         Compute optimal route for a single courier.
@@ -63,14 +64,16 @@ class TSPService:
             stops: Ordered list of delivery stops for one courier.
             excluded_edges: Stop IDs to skip (e.g. flooded road nodes).
             anomaly_id: Passed through into the response for traceability.
+            courier_id: Identifier for the courier this route belongs to.
 
         Returns:
-            RouteResponse with optimized_route, recalc_duration_ms, anomaly_id.
+            RouteResponse with courier_id, optimized_route, recalc_duration_ms, anomaly_id.
         """
         active_stops = [s for s in stops if s.id not in excluded_edges]
 
         if len(active_stops) <= 1:
             return RouteResponse(
+                courier_id=courier_id,
                 optimized_route=active_stops,
                 recalc_duration_ms=0,
                 anomaly_id=anomaly_id or str(uuid.uuid4()),
@@ -106,6 +109,7 @@ class TSPService:
         )
 
         return RouteResponse(
+            courier_id=courier_id,
             optimized_route=optimized,
             recalc_duration_ms=recalc_ms,
             anomaly_id=anomaly_id or str(uuid.uuid4()),

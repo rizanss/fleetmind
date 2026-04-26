@@ -66,4 +66,4 @@ async def test_anomaly_service_linear_failure_does_not_propagate():
     # Must not raise
     anomaly_id, affected = await service.handle(event)
     assert anomaly_id
-    assert affected == 3
+    assert affected == 1  # c1_semanggi only affects courier_1

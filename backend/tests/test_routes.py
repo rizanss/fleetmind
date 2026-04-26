@@ -29,6 +29,7 @@ async def test_current_route_response_schema():
 
     data = response.json()
     for route in data["routes"]:
+        assert "courier_id" in route
         assert "optimized_route" in route
         assert "recalc_duration_ms" in route
         assert "anomaly_id" in route

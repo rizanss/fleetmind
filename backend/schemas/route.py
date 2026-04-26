@@ -26,6 +26,7 @@ class AnomalyEvent(BaseModel):
 
 
 class RouteResponse(BaseModel):
+    courier_id: str
     optimized_route: list[RoutePoint]
     recalc_duration_ms: int
     anomaly_id: str
