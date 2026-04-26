@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Fleetmind — Autonomous Logistics Orchestrator",
+  title: "Fleetmind",
   description: "Real-time TSP rerouting demo with WebSocket updates",
 };
 
