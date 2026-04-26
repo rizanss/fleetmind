@@ -62,15 +62,17 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-4">
           {/* Logomark */}
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--fm-accent)] text-[var(--fm-bg)] text-xs font-black tracking-tighter shadow-[0_0_15px_var(--fm-accent)]">
-            FM
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)] drop-shadow-[0_0_8px_rgba(241,245,249,0.3)] leading-none">
+          <img
+            src="/fleetmind-logo.png"
+            alt="Logo"
+            className="h-10 w-auto drop-shadow-[0_0_5px_var(--fm-accent)]"
+          />
+          <div className="flex flex-col justify-center">
+            <h1 className="text-2xl font-medium tracking-tight text-[var(--fm-text)] font-[family-name:var(--font-inter)] drop-shadow-[0_0_8px_rgba(241,245,249,0.3)] leading-none">
               Fleetmind
             </h1>
-            <p className="text-[10px] text-[var(--fm-accent)] uppercase tracking-[0.2em] mt-1 font-bold font-[family-name:var(--font-inter)] leading-none">
-              Travelling Salesman Problem
+            <p className="text-[10px] text-[var(--fm-subtle)] uppercase tracking-wider mt-1.5 font-medium font-[family-name:var(--font-inter)] leading-none">
+              Pick the best routes for your couriers
             </p>
           </div>
         </div>
@@ -106,9 +108,13 @@ export default function DashboardPage() {
           <FleetMap routes={routes} />
         </main>
 
-        {/* Sidebar */}
-        <aside className="fm-scroll flex-[4] min-w-[320px] max-w-md flex flex-col gap-4 overflow-y-auto border-l border-[var(--fm-border)] bg-[var(--fm-surface)]/80 p-4 backdrop-blur-md shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
-          <AnomalyPanel onReset={handleReset} />
+        {/* Sidebar — does NOT scroll as a whole; each panel manages its own overflow */}
+        <aside className="flex-[4] min-w-[320px] max-w-md flex flex-col gap-4 overflow-hidden border-l border-[var(--fm-border)] bg-[var(--fm-surface)]/80 p-4 backdrop-blur-md shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+          {/* Simulation panel: capped so AuditTrail always has visible room */}
+          <div className="fm-scroll shrink-0 overflow-y-auto max-h-[58%]">
+            <AnomalyPanel onReset={handleReset} />
+          </div>
+          {/* AuditTrail: flex-1 fills whatever height remains */}
           <AuditTrail entries={auditEntries} />
         </aside>
       </div>
@@ -116,7 +122,7 @@ export default function DashboardPage() {
       {/* Footer */}
       <footer className="shrink-0 border-t border-[var(--fm-border)] bg-[var(--fm-surface)] px-4 py-1.5 flex items-center justify-center">
         <p className="text-[9px] uppercase tracking-[0.15em] text-[var(--fm-subtle)] font-bold font-[family-name:var(--font-space-grotesk)]">
-          Powered by Google OR-Tools · Dynamic TSP · WebSocket Real-time · Linear MCP Integration
+          Powered by Google OR-Tools · Last-Mile Delivery
         </p>
       </footer>
     </div>

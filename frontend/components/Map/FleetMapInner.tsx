@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, Polyline, Marker, Tooltip } from "react-leaflet";
 import type { RouteResponse } from "@/lib/types";
@@ -65,52 +65,70 @@ export default function FleetMapInner({ routes }: Props) {
         {routes.map((route) => {
           const color = COURIER_COLOR_MAP[route.courier_id] ?? FALLBACK_COLOR;
           const label = COURIER_LABEL_MAP[route.courier_id] ?? route.courier_id.toUpperCase();
-          const positions = route.optimized_route.map(
+
+          const stopPositions = route.optimized_route.map(
             (p) => [p.lat, p.lng] as [number, number]
           );
-          
-          const firstPoint = route.optimized_route[0];
+
+          // Closed circuit: return to the starting depot after the last delivery.
+          // The backend returns the ordered delivery stops without repeating the
+          // depot; we close the polyline here so the map shows A→B→C→D→A.
+          const circuitPositions: [number, number][] =
+            stopPositions.length > 1
+              ? [...stopPositions, stopPositions[0]]
+              : stopPositions;
+
+          const depotStop = route.optimized_route[0];
 
           return (
-            <div key={`${route.anomaly_id}-${route.courier_id}`}>
-              <Polyline positions={positions} pathOptions={{ color, weight: 3, opacity: 0.8 }} className="animate-pulse" />
+            // Key includes anomaly_id so React remounts all Leaflet layers on every route update
+            <React.Fragment key={`${route.anomaly_id}-${route.courier_id}`}>
+              <Polyline
+                positions={circuitPositions}
+                pathOptions={{ color, weight: 3, opacity: 0.8 }}
+                className="animate-pulse"
+              />
 
-              {/* Courier Badge on the map (attached to the first point of the route) */}
-              {firstPoint && (
-                <Marker 
-                  position={[firstPoint.lat, firstPoint.lng]} 
+              {/* Depot marker — first stop is both START and END of the circuit */}
+              {depotStop && (
+                <Marker
+                  position={[depotStop.lat, depotStop.lng]}
                   icon={L.divIcon({
                     className: "bg-transparent border-none",
-                    html: `<div style="background: var(--fm-surface); border-left: 2px solid ${color}; color: ${color}; box-shadow: 0 4px 12px rgba(0,0,0,0.5);" class="rounded px-2 py-1 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] whitespace-nowrap">${label} | TSP Route</div>`,
-                    iconAnchor: [-10, 10]
-                  })} 
+                    html: `<div style="background: var(--fm-surface); border: 2px solid ${color}; color: ${color}; box-shadow: 0 0 12px ${color}55;" class="rounded px-2 py-1 text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] whitespace-nowrap">${label} | DEPOT ⟳</div>`,
+                    iconAnchor: [-10, 10],
+                  })}
                 />
               )}
 
-              {/* Delivery Stops */}
+              {/* Delivery stops — key includes order so icon re-renders when position changes */}
               {route.optimized_route.map((stop) => {
+                const isDepot = stop.order === 0;
                 const stopIcon = L.divIcon({
                   className: "bg-transparent border-none",
-                  html: `<div style="background: ${color}; box-shadow: 0 0 10px ${color}; color: #000;" class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold font-[family-name:var(--font-space-grotesk)] border border-[var(--fm-surface)]">${stop.order + 1}</div>`,
+                  html: isDepot
+                    // Depot stop gets a diamond shape to distinguish start/end
+                    ? `<div style="background: ${color}; box-shadow: 0 0 14px ${color}; color: #000; transform: rotate(45deg);" class="flex h-5 w-5 items-center justify-center text-[9px] font-bold font-[family-name:var(--font-space-grotesk)] border-2 border-[var(--fm-surface)]"></div>`
+                    : `<div style="background: ${color}; box-shadow: 0 0 10px ${color}; color: #000;" class="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold font-[family-name:var(--font-space-grotesk)] border border-[var(--fm-surface)]">${stop.order + 1}</div>`,
                   iconSize: [20, 20],
-                  iconAnchor: [10, 10]
+                  iconAnchor: [10, 10],
                 });
 
                 return (
                   <Marker
-                    key={stop.id}
+                    key={`${stop.id}-${stop.order}`}
                     position={[stop.lat, stop.lng]}
                     icon={stopIcon}
                   >
                     <Tooltip permanent={false} direction="top">
                       <span className="text-[10px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] uppercase">
-                        #{stop.order + 1} {stop.id}
+                        {isDepot ? `DEPOT ${stop.id}` : `#${stop.order + 1} ${stop.id}`}
                       </span>
                     </Tooltip>
                   </Marker>
                 );
               })}
-            </div>
+            </React.Fragment>
           );
         })}
       </MapContainer>

@@ -15,10 +15,10 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { label: "Sudirman Banjir",     affected_point_id: "sudirman",  type: "road_closure",  note: "ALL",     color: "#FF3B5C" },
-  { label: "Semanggi Macet",      affected_point_id: "semanggi",  type: "road_closure",  note: "KURIR 1", color: "#00D4FF" },
-  { label: "Senayan Ditutup",     affected_point_id: "senayan",   type: "road_closure",  note: "KURIR 2", color: "#FF6B35" },
-  { label: "Paket Batal Thamrin", affected_point_id: "thamrin",   type: "cancellation",  note: "KURIR 3", color: "#00FF87" },
+  { label: "Sudirman Banjir", affected_point_id: "sudirman", type: "road_closure", note: "ALL", color: "#FF3B5C" },
+  { label: "Semanggi Macet", affected_point_id: "semanggi", type: "road_closure", note: "KURIR 1", color: "#00D4FF" },
+  { label: "Senayan Ditutup", affected_point_id: "senayan", type: "road_closure", note: "KURIR 2", color: "#FF6B35" },
+  { label: "Paket Batal Thamrin", affected_point_id: "thamrin", type: "cancellation", note: "KURIR 3", color: "#00FF87" },
 ];
 
 /* ── Stop data from backend ── */
@@ -155,16 +155,12 @@ export default function AnomalyPanel({ onReset }: Props) {
       {/* Header */}
       <div className="mb-4 border-b border-[var(--fm-border)] pb-3">
         <h2 className="text-sm font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)]">
-          ANOMALY SIMULATION
+          SIMULATION
         </h2>
         <p className="text-[10px] uppercase tracking-widest text-[var(--fm-accent)] mt-1 font-bold">
-          Dynamic TSP Re-routing Engine
+          TRAVELLING SALESMAN PROBLEM
         </p>
       </div>
-
-      <p className="text-[10px] leading-relaxed text-[var(--fm-subtle)] mb-4 font-[family-name:var(--font-inter)]">
-        When triggered, OR-Tools TSP solver recalculates optimal routes in real-time.
-      </p>
 
       {/* Mode toggle */}
       <div className="mb-4 flex rounded border border-[var(--fm-border)] bg-[var(--fm-bg)] p-0.5 text-[10px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)] uppercase">
@@ -172,11 +168,10 @@ export default function AnomalyPanel({ onReset }: Props) {
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded py-1.5 transition-all ${
-              mode === m
-                ? "bg-[var(--fm-surface)] text-[var(--fm-text)] shadow-[0_0_10px_rgba(0,0,0,0.5)]"
-                : "text-[var(--fm-subtle)] hover:text-[var(--fm-muted)]"
-            }`}
+            className={`flex-1 rounded py-1.5 transition-all ${mode === m
+              ? "bg-[var(--fm-surface)] text-[var(--fm-text)] shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+              : "text-[var(--fm-subtle)] hover:text-[var(--fm-muted)]"
+              }`}
           >
             {m}
           </button>
@@ -199,9 +194,9 @@ export default function AnomalyPanel({ onReset }: Props) {
                     <h3 className="font-bold text-[12px] text-[var(--fm-text)] truncate">{p.label}</h3>
                     <div className="mt-1.5 flex items-center gap-2">
                       <span className="rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
-                        {p.type === "road_closure" ? "ROAD CLOSURE" : "CANCELLATION"}
+                        {p.type === "road_closure" ? "JALAN DITUTUP" : "PEMBATALAN PAKET"}
                       </span>
-                      <span 
+                      <span
                         className="text-[9px] font-bold tracking-widest font-[family-name:var(--font-space-grotesk)]"
                         style={{ color: p.color }}
                       >
@@ -217,7 +212,7 @@ export default function AnomalyPanel({ onReset }: Props) {
                   className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50"
                 >
                   {/* Hover Glow */}
-                  <div 
+                  <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity"
                     style={{ background: `linear-gradient(90deg, transparent, ${p.color}, transparent)` }}
                   />
@@ -228,7 +223,7 @@ export default function AnomalyPanel({ onReset }: Props) {
                         EXECUTING...
                       </>
                     ) : (
-                      "TRIGGER"
+                      "RE-ROUTING"
                     )}
                   </span>
                 </button>
@@ -247,7 +242,7 @@ export default function AnomalyPanel({ onReset }: Props) {
           {/* Step 1: Pick a Courier */}
           <div className="space-y-1.5">
             <label className={labelClass}>
-              ① Target Courier
+              ① CHOOSE COURIER
             </label>
             <select
               value={customCourier}
@@ -269,7 +264,7 @@ export default function AnomalyPanel({ onReset }: Props) {
           {/* Step 2: Pick which stop to block */}
           <div className="space-y-1.5">
             <label className={labelClass}>
-              ② Affected Stop / Location
+              ② LOCATION
             </label>
             <select
               value={customStop}
@@ -292,15 +287,15 @@ export default function AnomalyPanel({ onReset }: Props) {
           {/* Step 3: Anomaly type */}
           <div className="space-y-1.5">
             <label className={labelClass}>
-              ③ Anomaly Type
+              ③ SIMULATION TYPE
             </label>
             <select
               value={customType}
               onChange={(e) => setCustomType(e.target.value as AnomalyEventType)}
               className={selectClass}
             >
-              <option value="road_closure">ROAD CLOSURE — block this stop</option>
-              <option value="cancellation">CANCELLATION — remove delivery</option>
+              <option value="road_closure">JALAN DITUTUP</option>
+              <option value="cancellation">PEMBATALAN PAKET</option>
             </select>
           </div>
 
@@ -318,7 +313,7 @@ export default function AnomalyPanel({ onReset }: Props) {
                   {COURIER_LABELS[customCourier] ?? customCourier}
                 </span>
                 <span className="rounded bg-[var(--fm-bg)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[var(--fm-subtle)] font-[family-name:var(--font-space-grotesk)]">
-                  {customType === "road_closure" ? "ROAD CLOSURE" : "CANCELLATION"}
+                  {customType === "road_closure" ? "JALAN DITUTUP" : "PEMBATALAN PAKET"}
                 </span>
                 <span className="rounded bg-[var(--fm-bg)] border border-[var(--fm-border)] px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-[var(--fm-text)] font-[family-name:var(--font-space-grotesk)]">
                   {selectedStopLabel}
@@ -334,7 +329,7 @@ export default function AnomalyPanel({ onReset }: Props) {
             className="group relative w-full overflow-hidden rounded bg-[var(--fm-surface)] border border-[var(--fm-border)] py-1.5 text-[10px] font-bold tracking-widest text-[var(--fm-text)] transition-all hover:bg-[var(--fm-border)] disabled:opacity-50 mt-1"
           >
             {/* Hover Glow */}
-            <div 
+            <div
               className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity"
               style={{ background: `linear-gradient(90deg, transparent, ${courierColor}, transparent)` }}
             />
@@ -345,7 +340,7 @@ export default function AnomalyPanel({ onReset }: Props) {
                   EXECUTING...
                 </>
               ) : (
-                "TRIGGER CUSTOM ANOMALY"
+                "RE-ROUTING"
               )}
             </span>
           </button>
