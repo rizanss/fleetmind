@@ -13,7 +13,10 @@ import uuid
 from backend.fixtures.demo_routes import DEMO_ROUTES
 from backend.schemas.route import (
     AnomalyEvent,
+    AnomalyEventType,
     LinearTicketPayload,
+    RouteEventContext,
+    RoutePoint,
     RouteResponse,
     WebSocketMessage,
 )
@@ -49,24 +52,37 @@ class AnomalyService:
         anomaly_id = str(uuid.uuid4())
         _last_anomaly_id = anomaly_id
 
+        # Use the live route state so previous anomalies (e.g. cancellations) are
+        # preserved — never re-introduce stops that were already removed.
+        current_stops = _get_current_stops()
+
         # Identify which couriers are actually affected by this anomaly.
         # A courier is affected only if at least one of its stops contains
         # the affected_point_id substring in its id.
         affected_couriers: dict[str, list[RoutePoint]] = {}
-        for courier_id, stops in DEMO_ROUTES.items():
+        for courier_id, stops in current_stops.items():
             has_affected_stop = any(
                 event.affected_point_id in stop.id for stop in stops
             )
             if has_affected_stop:
                 affected_couriers[courier_id] = stops
 
-        # Build excluded edges only from affected couriers' stops
-        excluded_edges = [
+        # Collect affected stop IDs from all affected couriers
+        affected_stop_ids = [
             stop.id
             for stops in affected_couriers.values()
             for stop in stops
             if event.affected_point_id in stop.id
         ]
+
+        # cancellation → remove the stop entirely (package no longer needs delivery)
+        # road_closure → keep the stop but penalize its distances to simulate a detour
+        excluded_edges: list[str] = []
+        penalized_stops: list[str] = []
+        if event.type == AnomalyEventType.cancellation:
+            excluded_edges = affected_stop_ids
+        else:
+            penalized_stops = affected_stop_ids
 
         # Re-compute route only for affected couriers (sync — critical path)
         new_routes: dict[str, RouteResponse] = {}
@@ -74,9 +90,42 @@ class AnomalyService:
             result = TSPService.recompute(
                 stops=stops,
                 excluded_edges=excluded_edges,
+                penalized_stops=penalized_stops,
                 anomaly_id=anomaly_id,
                 courier_id=courier_id,
             )
+
+            # Attach event context so the frontend can render a human-readable log.
+            # Find the affected stop in the pre-recompute list to get its previous order,
+            # then look it up in the result to get its new order (None if cancelled).
+            affected_stop: RoutePoint | None = next(
+                (s for s in stops if event.affected_point_id in s.id), None
+            )
+            if affected_stop is not None:
+                stop_after: RoutePoint | None = next(
+                    (s for s in result.optimized_route if s.id == affected_stop.id), None
+                )
+                # "c1_sudirman" → "Sudirman", "c3_thamrin_barat" → "Thamrin Barat"
+                name_raw = affected_stop.id.split("_", 1)[-1]
+                stop_name = name_raw.replace("_", " ").title()
+
+                ctx = RouteEventContext(
+                    anomaly_type=event.type.value,
+                    affected_stop_id=affected_stop.id,
+                    affected_stop_name=stop_name,
+                    previous_order=affected_stop.order,
+                    new_order=stop_after.order if stop_after is not None else None,
+                    total_stops_before=len(stops),
+                    total_stops_after=len(result.optimized_route),
+                )
+                result = RouteResponse(
+                    courier_id=result.courier_id,
+                    optimized_route=result.optimized_route,
+                    recalc_duration_ms=result.recalc_duration_ms,
+                    anomaly_id=result.anomaly_id,
+                    event_context=ctx,
+                )
+
             new_routes[courier_id] = result
 
         # Merge with existing routes — unaffected couriers keep their current state
@@ -130,6 +179,17 @@ class AnomalyService:
             await self._linear.create_ticket(payload)
         except Exception as exc:
             logger.error("Unhandled Linear error (anomaly=%s): %s", payload.anomaly_id, exc)
+
+
+def _get_current_stops() -> dict[str, list]:
+    """
+    Returns the live stop list per courier.
+    Prefers _current_routes (post-anomaly state) over DEMO_ROUTES so that
+    stops already removed by cancellations are never re-introduced.
+    """
+    if _current_routes:
+        return {cid: r.optimized_route for cid, r in _current_routes.items()}
+    return dict(DEMO_ROUTES)
 
 
 def get_current_routes() -> tuple[dict[str, RouteResponse], int]:
